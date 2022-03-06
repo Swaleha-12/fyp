@@ -2,10 +2,11 @@ import logging
 from typing import List, Dict, Any, Optional, Text
 
 from neo4j import GraphDatabase
+
 logger = logging.getLogger(__name__)
 
-class KnowledgeBase(object):
 
+class KnowledgeBase(object):
     def get_entities(
         self,
         entity_type: Text,
@@ -31,21 +32,24 @@ class KnowledgeBase(object):
 
         raise NotImplementedError("Method is not implemented.")
 
+
 class KnowledgeGraph(KnowledgeBase):
     """
     GraphDatabase uses a grakn graph database to encode your domain knowledege. Make
     sure to have the graph database set up and the grakn server running.
     """
 
-
-    def __init__(self, uri = "bolt://localhost:7687" , user = "neo4j" , password = "jimin"):
+    def __init__(self, uri="bolt://localhost:7687", user="neo4j", password="jimin"):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
         self.uri = uri
         self.user = user
         self.password = password
-        self.attribute_mapping = {"what is": "n4sch__comment", "What is": "n4sch__comment"}
+        self.attribute_mapping = {
+            "what is": "n4sch__comment",
+            "What is": "n4sch__comment",
+        }
         self.entity_type_mapping = {"business model": "BusinessModel"}
-        
+
     def close(self):
         self.driver.close()
 
@@ -61,10 +65,10 @@ class KnowledgeGraph(KnowledgeBase):
         return entity
         """
         type_ = ""
-##        if str(type(thing)) == "<class 'abc.n4sch__DOMAIN'>":
-##            type_ = "Domain"
-##        elif str(type(thing)) == "<class 'abc.n4sch__RANGE'>":
-##            type_ = "Range"
+        ##        if str(type(thing)) == "<class 'abc.n4sch__DOMAIN'>":
+        ##            type_ = "Domain"
+        ##        elif str(type(thing)) == "<class 'abc.n4sch__RANGE'>":
+        ##            type_ = "Range"
         if "n4sch__Class" in thing.labels:
             type_ = "Class"
         elif "n4sch__Relationship" in thing.labels:
@@ -73,12 +77,12 @@ class KnowledgeGraph(KnowledgeBase):
             type_ = "SubClass"
         elif "n4sch__Individual" in thing.labels:
             type_ = "Individual"
-        
+
         entity = {"id": thing.id, "type": type_}
         for prop, val in thing.items():
             entity[prop] = val
         return entity
-    
+
     def _execute_entity_query(self, query: Text) -> List[Dict[Text, Any]]:
         """
         Executes a query that returns a list of entities with all their attributes.
@@ -86,13 +90,12 @@ class KnowledgeGraph(KnowledgeBase):
         with self.driver.session() as session:
             print("Executing Cypher Query: " + query)
             result_iter = session.run(query)
-            #concepts = result_iter.collect_concepts()
+            # concepts = result_iter.collect_concepts()
             entities = []
             for record in result_iter:
                 entities.append(self._thing_to_dict(record["n"]))
             return entities
 
-            
     def _execute_attribute_query(self, query: Text) -> List[Any]:
         """
         Executes a query that returns the value(s) an entity has for a specific
@@ -106,7 +109,7 @@ class KnowledgeGraph(KnowledgeBase):
             return list(result_iter.single())
 
     def execute_relation_query(
-        self, query: Text, relation_name: Text 
+        self, query: Text, relation_name: Text
     ) -> List[Dict[Text, Any]]:
         """
         Execute a query that queries for a relation. All attributes of the relation and
@@ -121,7 +124,7 @@ class KnowledgeGraph(KnowledgeBase):
 
             for concept in result_iter:
                 relationships.append(concept["r"])
-            
+
             relation_entity = relationships[0].start_node
             relation = self._thing_to_dict(relation_entity)
             relation["type"] = relation_name
@@ -131,9 +134,7 @@ class KnowledgeGraph(KnowledgeBase):
 
             return relations
 
-    def get_attribute_of(
-        self, entity: Text, attribute: Text
-    ) -> List[Any]:
+    def get_attribute_of(self, entity: Text, attribute: Text) -> List[Any]:
         """
         Get the value of the given attribute for the provided entity.
         :param entity_type: entity type
@@ -142,11 +143,11 @@ class KnowledgeGraph(KnowledgeBase):
         :param attribute: attribute of interest
         :return: the value of the attribute
         """
-        #me_clause = self._get_me_clause(entity_type)
-        
+        # me_clause = self._get_me_clause(entity_type)
+
         return self._execute_attribute_query(
             f"""
-              match (n {{n4sch__name: "{entity}"}}
+              match (n {{n4sch__name: "{entity}"}})
               return n.{attribute}
             """
         )
@@ -166,52 +167,54 @@ class KnowledgeGraph(KnowledgeBase):
             """
         )
 
-    def get_entities(self, entity_type: Text, attributes: Optional[Dict[Text, Text]] = None ):
+    def get_entities(
+        self, entity_type: Text, attributes: Optional[Dict[Text, Text]] = None
+    ):
         attr = ""
         if attributes:
             attr = "{ "
-            for key,value in attributes.items():
-                attr = f"{attr} {key}: '{value}'" 
-            attr = attr+" }"
+            for key, value in attributes.items():
+                attr = f"{attr} {key}: '{value}'"
+            attr = attr + " }"
         print(attr)
         return self._execute_entity_query(
             f"""
              match (n:{entity_type} {attr} ) return n 
             """
-            )        
-
+        )
 
     # def get_payment_methods(self, attributes: [str] ):
 
     #     temp = self._execute_entity_query(
     #         f"""
     #           match (n:n4sch__class {{n4sch__name: "PaymentMethod"}}) return n
-    #         """            
+    #         """
     #     )
 
     def map(self, mapping_type: Text, mapping_key: Text) -> Text:
-            """
-            Query the given mapping table for the provided key.
-            :param mapping_type: the name of the mapping table
-            :param mapping_key: the mapping key
-            :return: the mapping value
-            """
+        """
+        Query the given mapping table for the provided key.
+        :param mapping_type: the name of the mapping table
+        :param mapping_key: the mapping key
+        :return: the mapping value
+        """
 
-            if (
-                mapping_type == "attribute-mapping"
-                and mapping_key in self.attribute_mapping
-            ):
-                return self.attribute_mapping[mapping_key]
+        if (
+            mapping_type == "attribute-mapping"
+            and mapping_key in self.attribute_mapping
+        ):
+            return self.attribute_mapping[mapping_key]
 
-            if (
-                mapping_type == "entity-type-mapping"
-                and mapping_key in self.entity_type_mapping
-            ):
-                return self.entity_type_mapping[mapping_key]
+        if (
+            mapping_type == "entity-type-mapping"
+            and mapping_key in self.entity_type_mapping
+        ):
+            return self.entity_type_mapping[mapping_key]
+
 
 # if __name__ == "__main__":
 #     q = KnowledgeGraph("bolt://localhost:7687", "neo4j", "jimin")
 #     print(q.map("attribute-mapping", "what is"))
-#     #print(q.get_entities("n4sch__Class", {"n4sch__name": "PaymentMethod"}))
+#     y = q.get_entities("n4sch__Class", {"n4sch__name": "KeyResource"})
+#     print(y[0]["n4sch__comment"])
 #     q.close()
-        

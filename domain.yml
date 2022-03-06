@@ -8,26 +8,12 @@ intents:
   - mood_great
   - mood_unhappy
   - bot_challenge
-  - query_attribute
+  - query_entities
 
 entities:
-  - PaymentMethod
-  - BusinessModel
-  - attribute
-  - entity_type
-  - mention
-
-slots:
-  attribute:
-    type: text
-  
-  entity_type:
-    type: text
-
-  mention:
-    type: text
-
-
+  - payment method
+  - business model
+  - KeyResources
 
 responses:
   utter_greet:
@@ -50,20 +36,11 @@ responses:
   - text: "I am a bot, powered by Rasa."
 
   utter_query_entities:
-  - text: "test passed bhaar me jaa"
-
-  utter_out_of_scope:
-  - text: Sorry, I cannot help you with that.
-  - text: I'm not able to help you with that.
+  - text: "The available options are: Bank transfer, Cash on delivery, JazzCash or Easypaisa wallets"
 
 actions:
   - action_query_attribute
-  - utter_greet
-  - utter_goodbye
-  - utter_out_of_scope
-  - utter_happy
-  - utter_did_that_help
-  - utter_cheer_up
+  
 
 session_config:
   session_expiration_time: 60
