@@ -93,11 +93,7 @@ nlu:
 
 - intent: query_entities
   examples: |
-    - what are [payment methods](payment method) available in Pakistan?
-    - What are different components of a [business model](business model)?
-    - What does a business model entail?
-    - I don’t understand what channels are 
-    - So channels are a way of reaching to customer segments? What are customer segments available? 
-    - What is market space? 
-    - What is [Key resources](KeyResources)
+    - What are [mutual funds](MutualFunds)?
+    - what is meant by [liquidity risk](LiquidityRisk)?
+    - What is [Market risk](MarketRisk) ?
 

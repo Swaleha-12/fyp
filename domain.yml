@@ -11,9 +11,10 @@ intents:
   - query_entities
 
 entities:
-  - payment method
-  - business model
-  - KeyResources
+  - MutualFunds
+  - LiquidityRisk
+  - MarketRisk
+  
 
 responses:
   utter_greet:

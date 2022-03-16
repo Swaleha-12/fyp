@@ -26,7 +26,11 @@ def get_entity_type(tracker: Tracker) -> Text:
     :param tracker: tracker
     :return: entity type (same type as used in the knowledge base)
     """
-    graph_database = KnowledgeGraph("bolt://localhost:7687", "neo4j", "jimin")
+    graph_database = KnowledgeGraph(
+        "neo4j+s://147e2688.databases.neo4j.io",
+        "neo4j",
+        "mSVGV6yUNTVmSi0_8uyt6psAnd7c5zOhUWMGvZHr0cg",
+    )
     entity_type = tracker.get_slot("entity_type")
     return graph_database.map("entity-type-mapping", entity_type)
 
@@ -44,17 +48,21 @@ class ActionQueryAttribute(Action):
 
         # name = get_entity_type(tracker)
 
-        q = KnowledgeGraph("bolt://localhost:7687", "neo4j", "jimin")
-        # print(tracker.latest_message)
+        q = KnowledgeGraph(
+            "neo4j+s://147e2688.databases.neo4j.io",
+            "neo4j",
+            "mSVGV6yUNTVmSi0_8uyt6psAnd7c5zOhUWMGvZHr0cg",
+        )
+
         entity_type = tracker.latest_message["entities"][0]["entity"]
         name = q.map("entity-type-mapping", entity_type)
-        value = q.get_entities("n4sch__Class", {"n4sch__name": name})
+        value = q.get_entities("n4sch__Class", {"n4sch__name": entity_type})
         print(value)
-        if value is not None and len(value) == 1:
-            dispatcher.utter_message(f"'{value[0]['n4sch__comment']}'.")
+        if value is not None:
+            dispatcher.utter_message(f"'{value[0][0]['n4sch__comment']}'.")
         else:
             dispatcher.utter_message(
-                f"Did not found a valid value for attribute for entity '{entity_type}'."
+                f"Did not found a valid value for entity '{entity_type}'."
             )
 
         return []

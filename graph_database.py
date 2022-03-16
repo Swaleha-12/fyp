@@ -55,7 +55,7 @@ class KnowledgeGraph(KnowledgeBase):
 
     def _thing_to_dict(self, thing):
         """
-        Converts a thing (a grakn object) to a dict for easy retrieval of the thing's
+        Converts a thing (a neo4j object) to a dict for easy retrieval of the thing's
         attributes.
         """
         """
@@ -80,6 +80,12 @@ class KnowledgeGraph(KnowledgeBase):
 
         entity = {"id": thing.id, "type": type_}
         for prop, val in thing.items():
+            entity[prop] = val
+        return entity
+
+    def _relation_to_dict(self, rel):
+        entity = {"id": rel.id, "type": rel.type}
+        for prop, val in rel.items():
             entity[prop] = val
         return entity
 
@@ -108,8 +114,8 @@ class KnowledgeGraph(KnowledgeBase):
             result_iter = session.run(query)
             return list(result_iter.single())
 
-    def execute_relation_query(
-        self, query: Text, relation_name: Text
+    def _execute_relation_query(
+        self, query: Text, relation_name: Text = ""
     ) -> List[Dict[Text, Any]]:
         """
         Execute a query that queries for a relation. All attributes of the relation and
@@ -121,16 +127,19 @@ class KnowledgeGraph(KnowledgeBase):
 
             relations = []
             relationships = []
+            relation = {}
+            nodes = []
 
             for concept in result_iter:
                 relationships.append(concept["r"])
-
-            relation_entity = relationships[0].start_node
-            relation = self._thing_to_dict(relation_entity)
-            relation["type"] = relation_name
-            relation["start"] = self._thing_to_dict(relationships[0].end_node)
-            relation["end"] = self._thing_to_dict(relationships[1].end_node)
-            relations.append(relation)
+            for thing in relationships:
+                relation = self._relation_to_dict(thing)
+                for node in thing.nodes:
+                    node = self._thing_to_dict(node)
+                    nodes.append(node)
+                relation["start"] = nodes[0]
+                relation["end"] = nodes[1]
+                relations.append(relation)
 
             return relations
 
@@ -162,7 +171,7 @@ class KnowledgeGraph(KnowledgeBase):
         """
         return self._execute_entity_query(
             f"""
-              match (a:{entity_type} {{n4sch__name: "{entity}"}})<-[r:{rel_type}]-(n)
+              match (a {{n4sch__name: "{entity}"}})-[r:{rel_type}]-(n)
               return n
             """
         )
@@ -183,13 +192,34 @@ class KnowledgeGraph(KnowledgeBase):
             """
         )
 
-    # def get_payment_methods(self, attributes: [str] ):
+    def get_all_relations(self, entity_type: Text, entity: Text):
 
-    #     temp = self._execute_entity_query(
-    #         f"""
-    #           match (n:n4sch__class {{n4sch__name: "PaymentMethod"}}) return n
-    #         """
-    #     )
+        return self._execute_relation_query(
+            f"""
+              match (n:{entity_type} {{n4sch__name: "{entity}"}})-[r]-(m)
+              return *
+            """
+        )
+
+    def get_sibling_entities(self, entity_type: Text, entity: Text):
+        relations = self.get_all_relations(entity_type, entity)
+        siblings = {}
+        for rel in relations:
+            if rel["start"]["n4sch__name"] == entity:
+                siblings[rel["type"]] = self._execute_entity_query(
+                    f"""
+                            match (a {{n4sch__name: "{rel["end"]["n4sch__name"]}"}})<-[r:{rel["type"]}]-(n)
+                            return n
+                        """
+                )
+            else:
+                siblings[rel["type"]] = self._execute_entity_query(
+                    f"""
+                            match (a {{n4sch__name: "{rel["start"]["n4sch__name"]}"}})-[r:{rel["type"]}]->(n)
+                            return n
+                        """
+                )
+        return siblings
 
     def map(self, mapping_type: Text, mapping_key: Text) -> Text:
         """
@@ -213,8 +243,11 @@ class KnowledgeGraph(KnowledgeBase):
 
 
 # if __name__ == "__main__":
-#     q = KnowledgeGraph("bolt://localhost:7687", "neo4j", "jimin")
-#     print(q.map("attribute-mapping", "what is"))
-#     y = q.get_entities("n4sch__Class", {"n4sch__name": "KeyResource"})
-#     print(y[0]["n4sch__comment"])
+#     q = KnowledgeGraph(
+#         "neo4j+s://147e2688.databases.neo4j.io",
+#         "neo4j",
+#         "mSVGV6yUNTVmSi0_8uyt6psAnd7c5zOhUWMGvZHr0cg",
+#     )
+#     print(q.get_sibling_entities("n4sch__Class", "TaxBenefit"))
+#     # print(q.get_entities("n4sch__Class", {"n4sch__name": "PaymentMethod"}))
 #     q.close()
